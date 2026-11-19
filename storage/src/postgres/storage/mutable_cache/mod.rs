@@ -96,7 +96,7 @@
 //!   (`OAT_DROP` on `pg_class`) call [`invalidate_index`] to evict all cached slots for dropped, reindexed,
 //!   or truncated relations.
 
-#![allow(unsafe_op_in_unsafe_fn)]
+#![allow(clippy::missing_safety_doc, unsafe_op_in_unsafe_fn)]
 
 pub mod directory;
 pub mod pack;
@@ -197,7 +197,7 @@ impl MutableCacheKey {
 /// copies it into shared memory. Concurrent workers wait on a shared [`ConditionVariable`].
 ///
 /// If a builder backend aborts, crashes, or is killed before completing, waiting workers detect that
-/// [`is_pid_alive`] is false, reset the entry, and allow another worker to retry.
+/// `is_pid_alive` is false, reset the entry, and allow another worker to retry.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 #[repr(C)]
 pub struct InflightBuild {
@@ -491,7 +491,7 @@ impl MutableCacheHeader {
     ///
     /// First attempts a fast-path buddy allocation via [`SlabPool::allocate`].
     /// If no free slab of sufficient order is available, initiates a clock sweep
-    /// ([`Self::evict_with_clock_sweep`]) over the slot table to evict superseded or cold entries,
+    /// (`Self::evict_with_clock_sweep`) over the slot table to evict superseded or cold entries,
     /// coalescing buddy slabs until a suitable slab is freed.
     pub fn allocate(
         &self,
@@ -1064,7 +1064,7 @@ pub fn get_or_build(
 
 /// Invalidate all cache slots for `segment_id` across all bounds.
 ///
-/// Called from [`crate::postgres::merge`] when a mutable segment is merged into an immutable segment.
+/// Called when a mutable segment is merged into an immutable segment.
 pub fn invalidate_segment(
     database_oid: pg_sys::Oid,
     index_oid: pg_sys::Oid,
