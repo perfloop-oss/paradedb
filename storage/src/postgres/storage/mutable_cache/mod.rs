@@ -932,7 +932,6 @@ pub fn get_or_build(
         let packed_bytes = match pack::pack_segment(&ram_dir, &segment_id) {
             Ok(bytes) => bytes,
             Err(e) => {
-                pgrx::warning!("pg_search: failed to pack mutable segment: {e}");
                 build_guard.completed = true;
                 let guard = cache.lock.acquire_exclusive();
                 let inflights = unsafe { cache.inflight_builds_mut(&guard) };
@@ -941,6 +940,7 @@ pub fn get_or_build(
                     cache.cv.broadcast();
                 }
                 drop(guard);
+                pgrx::warning!("pg_search: failed to pack mutable segment: {e}");
                 return Ok(Arc::new(ram_dir));
             }
         };
@@ -958,13 +958,13 @@ pub fn get_or_build(
         let span = match cache.allocate(packed_bytes.len(), &guard) {
             Some(span) => span,
             None => {
-                pgrx::warning!(
-                    "pg_search: mutable segment cache arena full, falling back to local indexing"
-                );
                 build_guard.completed = true;
                 inflights[build_idx] = InflightBuild::empty();
                 cache.cv.broadcast();
                 drop(guard);
+                pgrx::warning!(
+                    "pg_search: mutable segment cache arena full, falling back to local indexing"
+                );
                 return Ok(Arc::new(ram_dir));
             }
         };
@@ -979,9 +979,6 @@ pub fn get_or_build(
         }
 
         let Some(slot_idx) = claim_slot_idx else {
-            pgrx::warning!(
-                "pg_search: mutable segment cache slot table full, falling back to local indexing"
-            );
             build_guard.completed = true;
             let slab_pool = unsafe { cache.slab_pool_mut(&guard) };
             slab_pool.free(span.offset, span.order);
@@ -989,6 +986,9 @@ pub fn get_or_build(
             inflights[build_idx] = InflightBuild::empty();
             cache.cv.broadcast();
             drop(guard);
+            pgrx::warning!(
+                "pg_search: mutable segment cache slot table full, falling back to local indexing"
+            );
             return Ok(Arc::new(ram_dir));
         };
 
